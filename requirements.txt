@@ -1,0 +1,10 @@
+streamlit==1.45.1
+yfinance
+pandas
+numpy
+matplotlib
+plotly
+torch
+transformers
+pydeck
+watchdog
