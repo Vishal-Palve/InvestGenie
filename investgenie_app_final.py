@@ -885,5 +885,5 @@ def run_investgenie_app():
         )
 
 # Entry point when running the script directly
-if _name_ == "_main_":
+if __name__ == "__main__":
     run_investgenie_app()
