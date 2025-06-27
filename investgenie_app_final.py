@@ -486,20 +486,22 @@ def analyze_portfolio_sentiment(portfolio_allocation, financial_data):
             ]
             
             # Analyze sentiment for each asset in the portfolio
-           for ticker, details in portfolio_allocation.items():
-               if ticker in financial_data:
-                   try:
-            # Get news for the ticker or use sample news
-                        news_items = financial_data[ticker].get('news', [])
-                        news_text = ' '.join([n.get('title', '') for n in news_items if n.get('title')])
+    for ticker, details in portfolio_allocation.items():
+        if ticker in financial_data:
+            try:
+                # Get news for the ticker
+                news_items = financial_data[ticker].get('news', [])
+                news_text = ' '.join([n.get('title', '') for n in news_items if n.get('title')])
 
-            # Use fallback sample if no news titles found
-                        if not news_text.strip():
-                            news_text = random.choice(sample_news_templates).format(ticker=ticker)
+                # Use sample news if result is empty
+                if not news_text.strip():
+                    news_text = random.choice(sample_news_templates).format(ticker=ticker)
 
-                    except Exception as e:
-            # Fallback to sample news if any error occurs
-                      news_text = random.choice(sample_news_templates).format(ticker=ticker)
+            except Exception:
+                news_text = random.choice(sample_news_templates).format(ticker=ticker)
+
+            # Continue with sentiment analysis here...
+
             
 
 
