@@ -9,7 +9,8 @@ import random
 from datetime import datetime, timedelta
 import torch
 from transformers import pipeline, AutoTokenizer, AutoModelForQuestionAnswering
-
+from streamlit_autorefresh import st_autorefresh
+import requests
 # Set page configuration
 def configure_page():
     """Configure the Streamlit page settings."""
@@ -494,7 +495,10 @@ def analyze_portfolio_sentiment(portfolio_allocation, financial_data):
                         news_text = random.choice(sample_news_templates).format(ticker=ticker)
                     else:
                         # Use the title from the first news item
-                        news_text = news_items[0].get('title', f"News about {ticker}")
+                       news_text = ' '.join([n.get('title', '') for n in news_items if n.get('title')])
+if not news_text:
+    news_text = random.choice(sample_news_templates).format(ticker=ticker)
+
                     
                     # Run sentiment analysis
                     sentiment_result = sentiment_pipeline(news_text)
@@ -664,7 +668,20 @@ def display_portfolio_summary(portfolio_metrics, categorized_portfolio, investme
             'total': category_total,
             'percentage': category_percentage
         }
-    
+    st.subheader("📈 Live Market Tickers")
+for ticker in all_tickers[:5]:
+    try:
+        live_price = yf.Ticker(ticker).info.get("regularMarketPrice", None)
+        if live_price:
+            st.metric(label=f"{ticker} Price", value=f"${live_price:.2f}")
+    except:
+        st.write(f"{ticker}: Price unavailable")
+
+if include_crypto:
+    st.subheader("💹 Live Crypto Prices")
+    st.metric("Bitcoin (BTC)", f"${get_crypto_price('bitcoin')}")
+    st.metric("Ethereum (ETH)", f"${get_crypto_price('ethereum')}")
+
     # Display portfolio allocation chart
     st.subheader("Portfolio Allocation")
     
@@ -832,8 +849,17 @@ def display_portfolio_summary(portfolio_metrics, categorized_portfolio, investme
     Past performance does not guarantee future results. Consider consulting with a financial advisor
     before making investment decisions. The allocations shown are for educational purposes only.
     """)
+def get_crypto_price(symbol="bitcoin"):
+    url = f"https://api.coingecko.com/api/v3/simple/price?ids={symbol}&vs_currencies=usd"
+    try:
+        res = requests.get(url).json()
+        return res.get(symbol, {}).get("usd", "N/A")
+    except:
+        return "N/A"
 
 def run_investgenie_app():
+    st_autorefresh(interval=60000, key="refresh")  # Auto-refresh every 60s
+
     """Main function to run the InvestGenie application."""
     # Configure the page
     configure_page()
