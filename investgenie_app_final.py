@@ -462,73 +462,69 @@ def categorize_assets(portfolio_allocation, asset_universe):
 def analyze_portfolio_sentiment(portfolio_allocation, financial_data):
     """
     Analyze sentiment for the assets in the portfolio using FinBERT.
-    
+
     Args:
         portfolio_allocation (dict): Portfolio allocation
         financial_data (dict): Financial data including news
-    
+
     Returns:
         dict: Sentiment analysis results for each asset
     """
     sentiment_results = {}
-    
+
     try:
         with st.spinner("Analyzing market sentiment with FinBERT..."):
             # Initialize the sentiment pipeline
             sentiment_pipeline = pipeline("sentiment-analysis", model="ProsusAI/finbert")
-            
-            # Create sample news if no news is available
+
+            # Sample fallback news
             sample_news_templates = [
                 "{ticker} has been showing steady performance in the current market conditions.",
                 "Analysts are cautiously optimistic about {ticker}'s outlook for the next quarter.",
                 "{ticker} reported earnings that met expectations despite challenging market conditions.",
                 "Market experts are watching {ticker} closely as it navigates through current economic headwinds."
             ]
-            
+
             # Analyze sentiment for each asset in the portfolio
-    for ticker, details in portfolio_allocation.items():
-        if ticker in financial_data:
-            try:
-                # Get news for the ticker
-                news_items = financial_data[ticker].get('news', [])
-                news_text = ' '.join([n.get('title', '') for n in news_items if n.get('title')])
+            for ticker, details in portfolio_allocation.items():
+                if ticker in financial_data:
+                    try:
+                        # Get news for the ticker
+                        news_items = financial_data[ticker].get('news', [])
+                        news_text = ' '.join([n.get('title', '') for n in news_items if n.get('title')])
 
-                # Use sample news if result is empty
-                if not news_text.strip():
-                    news_text = random.choice(sample_news_templates).format(ticker=ticker)
+                        # Use sample news if result is empty
+                        if not news_text.strip():
+                            news_text = random.choice(sample_news_templates).format(ticker=ticker)
 
-            except Exception:
-                news_text = random.choice(sample_news_templates).format(ticker=ticker)
+                    except Exception:
+                        # Fallback if there's an error getting news
+                        news_text = random.choice(sample_news_templates).format(ticker=ticker)
 
-            # Continue with sentiment analysis here...
-
-            
-
-
-                    
                     # Run sentiment analysis
                     sentiment_result = sentiment_pipeline(news_text)
                     sentiment_label = sentiment_result[0]['label']
                     sentiment_score = sentiment_result[0]['score']
-                    
+
                     # Store the results
                     sentiment_results[ticker] = {
                         'text': news_text,
                         'label': sentiment_label,
                         'score': sentiment_score
                     }
-    
+
     except Exception as e:
         st.error(f"Error in sentiment analysis: {str(e)}")
-        # Provide simulated results if there's an error
+        # Provide simulated results if something fails entirely
         for ticker in portfolio_allocation.keys():
             sentiment_results[ticker] = {
                 'text': f"Simulated sentiment analysis for {ticker}",
                 'label': random.choice(['positive', 'neutral', 'negative']),
                 'score': random.uniform(0.6, 0.95)
             }
-    
+
     return sentiment_results
+
 
 def generate_portfolio_qa(portfolio_metrics, risk_tolerance, investment_term, include_crypto):
     """
