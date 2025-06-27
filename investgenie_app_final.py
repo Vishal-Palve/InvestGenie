@@ -865,52 +865,77 @@ def run_investgenie_app():
     """Main function to run the InvestGenie application."""
     # Configure the page
     configure_page()
-    
+
     # Get user inputs including AI feature preferences
     inputs = get_user_inputs()
-    
+
     if all(inputs):
         investment_amount, risk_tolerance, investment_term, include_crypto, use_sentiment_analysis, use_qa_analysis = inputs
-        
+
         # Define asset universe
         asset_universe = get_asset_universe()
-        
+
         # Calculate risk profile based on inputs
         risk_profile = calculate_risk_profile(risk_tolerance, investment_term, include_crypto)
-        
+
         # Get detailed allocation
         detailed_allocation = get_detailed_allocation(risk_profile, asset_universe)
-        
+
         # Collect all tickers for data fetching
         all_tickers = list(detailed_allocation.keys())
-        
+
         # Fetch financial data
         financial_data = fetch_financial_data(all_tickers)
-        
+
         # Calculate portfolio metrics
         portfolio_metrics, portfolio_allocation = calculate_portfolio_metrics(
             detailed_allocation, financial_data, investment_amount
         )
-        
+
         # Categorize assets
         categorized_portfolio = categorize_assets(portfolio_allocation, asset_universe)
-        
+
         # Run GenAI analysis if requested
         sentiment_results = None
         qa_insights = None
-        
+
         if use_sentiment_analysis:
             sentiment_results = analyze_portfolio_sentiment(portfolio_allocation, financial_data)
-        
+
         if use_qa_analysis:
-            qa_insights = generate_portfolio_qa(portfolio_metrics, risk_tolerance, investment_term, include_crypto)
-        
+            qa_insights = generate_portfolio_qa(
+                portfolio_metrics, risk_tolerance, investment_term, include_crypto
+            )
+
+        # ✅ Show live stock prices
+        st.subheader("📈 Live Market Tickers")
+        for ticker in all_tickers[:5]:  # Limit to top 5 tickers
+            try:
+                live_price = yf.Ticker(ticker).info.get("regularMarketPrice", None)
+                if live_price:
+                    st.metric(label=f"{ticker} Price", value=f"${live_price:.2f}")
+            except:
+                st.write(f"{ticker}: Price unavailable")
+
+        # ✅ Show live crypto prices if selected
+        if include_crypto:
+            st.subheader("💹 Live Crypto Prices")
+            st.metric("Bitcoin (BTC)", f"${get_crypto_price('bitcoin')}")
+            st.metric("Ethereum (ETH)", f"${get_crypto_price('ethereum')}")
+
         # Display portfolio summary with AI insights
         display_portfolio_summary(
-            portfolio_metrics, categorized_portfolio, investment_amount, 
-            risk_tolerance, investment_term, use_sentiment_analysis,
-            use_qa_analysis, sentiment_results, qa_insights
+            portfolio_metrics,
+            categorized_portfolio,
+            investment_amount,
+            risk_tolerance,
+            investment_term,
+            use_sentiment_analysis,
+            use_qa_analysis,
+            sentiment_results,
+            qa_insights
         )
+
 
 # Entry point when running the script directly
 if __name__ == "__main__":
