@@ -9,8 +9,7 @@ import random
 from datetime import datetime, timedelta
 import torch
 from transformers import pipeline, AutoTokenizer, AutoModelForQuestionAnswering
-from streamlit_autorefresh import st_autorefresh
-import requests
+
 # Set page configuration
 def configure_page():
     """Configure the Streamlit page settings."""
@@ -462,69 +461,64 @@ def categorize_assets(portfolio_allocation, asset_universe):
 def analyze_portfolio_sentiment(portfolio_allocation, financial_data):
     """
     Analyze sentiment for the assets in the portfolio using FinBERT.
-
+    
     Args:
         portfolio_allocation (dict): Portfolio allocation
         financial_data (dict): Financial data including news
-
+    
     Returns:
         dict: Sentiment analysis results for each asset
     """
     sentiment_results = {}
-
+    
     try:
         with st.spinner("Analyzing market sentiment with FinBERT..."):
             # Initialize the sentiment pipeline
             sentiment_pipeline = pipeline("sentiment-analysis", model="ProsusAI/finbert")
-
-            # Sample fallback news
+            
+            # Create sample news if no news is available
             sample_news_templates = [
                 "{ticker} has been showing steady performance in the current market conditions.",
                 "Analysts are cautiously optimistic about {ticker}'s outlook for the next quarter.",
                 "{ticker} reported earnings that met expectations despite challenging market conditions.",
                 "Market experts are watching {ticker} closely as it navigates through current economic headwinds."
             ]
-
+            
             # Analyze sentiment for each asset in the portfolio
             for ticker, details in portfolio_allocation.items():
                 if ticker in financial_data:
-                    try:
-                        # Get news for the ticker
-                        news_items = financial_data[ticker].get('news', [])
-                        news_text = ' '.join([n.get('title', '') for n in news_items if n.get('title')])
-
-                        # Use sample news if result is empty
-                        if not news_text.strip():
-                            news_text = random.choice(sample_news_templates).format(ticker=ticker)
-
-                    except Exception:
-                        # Fallback if there's an error getting news
+                    # Get news for the ticker or use sample news
+                    news_items = financial_data[ticker].get('news', [])
+                    if not news_items:
+                        # Use sample news if no news is available
                         news_text = random.choice(sample_news_templates).format(ticker=ticker)
-
+                    else:
+                        # Use the title from the first news item
+                        news_text = news_items[0].get('title', f"News about {ticker}")
+                    
                     # Run sentiment analysis
                     sentiment_result = sentiment_pipeline(news_text)
                     sentiment_label = sentiment_result[0]['label']
                     sentiment_score = sentiment_result[0]['score']
-
+                    
                     # Store the results
                     sentiment_results[ticker] = {
                         'text': news_text,
                         'label': sentiment_label,
                         'score': sentiment_score
                     }
-
+    
     except Exception as e:
         st.error(f"Error in sentiment analysis: {str(e)}")
-        # Provide simulated results if something fails entirely
+        # Provide simulated results if there's an error
         for ticker in portfolio_allocation.keys():
             sentiment_results[ticker] = {
                 'text': f"Simulated sentiment analysis for {ticker}",
                 'label': random.choice(['positive', 'neutral', 'negative']),
                 'score': random.uniform(0.6, 0.95)
             }
-
+    
     return sentiment_results
-
 
 def generate_portfolio_qa(portfolio_metrics, risk_tolerance, investment_term, include_crypto):
     """
@@ -670,20 +664,7 @@ def display_portfolio_summary(portfolio_metrics, categorized_portfolio, investme
             'total': category_total,
             'percentage': category_percentage
         }
-    st.subheader("📈 Live Market Tickers")
-for ticker in all_tickers[:5]:
-    try:
-        live_price = yf.Ticker(ticker).info.get("regularMarketPrice", None)
-        if live_price:
-            st.metric(label=f"{ticker} Price", value=f"${live_price:.2f}")
-    except:
-        st.write(f"{ticker}: Price unavailable")
-
-if include_crypto:
-    st.subheader("💹 Live Crypto Prices")
-    st.metric("Bitcoin (BTC)", f"${get_crypto_price('bitcoin')}")
-    st.metric("Ethereum (ETH)", f"${get_crypto_price('ethereum')}")
-
+    
     # Display portfolio allocation chart
     st.subheader("Portfolio Allocation")
     
@@ -717,7 +698,7 @@ if include_crypto:
     # Function to display category table
     def display_category_table(category, assets):
         if assets:
-            st.write(f"**{category}** (${category_totals[category]['total']:.2f}, {category_totals[category]['percentage']:.1f}%)")
+            st.write(f"{category}** (${category_totals[category]['total']:.2f}, {category_totals[category]['percentage']:.1f}%)")
             
             # Create dataframe for display
             data = []
@@ -784,11 +765,11 @@ if include_crypto:
                 
                 with st.expander(f"{ticker}: {sentiment['label'].title()} ({sentiment['score']:.1%})"):
                     st.markdown(f"""
-                    **News/Context:** {sentiment['text']}
+                    *News/Context:* {sentiment['text']}
                     
-                    **Sentiment Score:** <span style='color:{color};font-weight:bold;'>{sentiment['score']:.1%}</span>
+                    *Sentiment Score:* <span style='color:{color};font-weight:bold;'>{sentiment['score']:.1%}</span>
                     
-                    **Potential Impact:** {'This positive sentiment may support the asset price in the near term.' if sentiment['label'] == 'positive' else 'This neutral sentiment suggests stable performance in the near term.' if sentiment['label'] == 'neutral' else 'This negative sentiment could create near-term volatility or pressure on the asset price.'}
+                    *Potential Impact:* {'This positive sentiment may support the asset price in the near term.' if sentiment['label'] == 'positive' else 'This neutral sentiment suggests stable performance in the near term.' if sentiment['label'] == 'neutral' else 'This negative sentiment could create near-term volatility or pressure on the asset price.'}
                     """, unsafe_allow_html=True)
     
     # Display AI Q&A insights if enabled
@@ -813,7 +794,7 @@ if include_crypto:
     
     with col1:
         st.markdown(f"""
-        **Profile Summary:**
+        *Profile Summary:*
         - Investment Amount: ${investment_amount:,.2f}
         - Risk Tolerance: {risk_tolerance}
         - Investment Term: {investment_term}
@@ -825,21 +806,21 @@ if include_crypto:
     with col2:
         if risk_tolerance in ["Low", "Medium-Low"]:
             st.markdown("""
-            **Conservative Strategy Notes:**
+            *Conservative Strategy Notes:*
             - Focus on capital preservation with steady growth
             - Higher allocation to bonds for stability
             - Limited exposure to volatile assets
             """)
         elif risk_tolerance == "Medium":
             st.markdown("""
-            **Balanced Strategy Notes:**
+            *Balanced Strategy Notes:*
             - Equal focus on growth and stability
             - Diversified across multiple asset classes
             - Moderate risk with potential for moderate returns
             """)
         else:  # Medium-High or High
             st.markdown("""
-            **Growth Strategy Notes:**
+            *Growth Strategy Notes:*
             - Focus on long-term capital appreciation
             - Higher allocation to stocks for growth potential
             - Higher volatility with potential for higher returns
@@ -847,97 +828,62 @@ if include_crypto:
     
     # Educational disclaimer
     st.info("""
-    **Disclaimer:** This portfolio is generated based on historical data and general investment principles.
+    *Disclaimer:* This portfolio is generated based on historical data and general investment principles.
     Past performance does not guarantee future results. Consider consulting with a financial advisor
     before making investment decisions. The allocations shown are for educational purposes only.
     """)
-def get_crypto_price(symbol="bitcoin"):
-    url = f"https://api.coingecko.com/api/v3/simple/price?ids={symbol}&vs_currencies=usd"
-    try:
-        res = requests.get(url).json()
-        return res.get(symbol, {}).get("usd", "N/A")
-    except:
-        return "N/A"
 
 def run_investgenie_app():
-    st_autorefresh(interval=60000, key="refresh")  # Auto-refresh every 60s
-
     """Main function to run the InvestGenie application."""
     # Configure the page
     configure_page()
-
+    
     # Get user inputs including AI feature preferences
     inputs = get_user_inputs()
-
+    
     if all(inputs):
         investment_amount, risk_tolerance, investment_term, include_crypto, use_sentiment_analysis, use_qa_analysis = inputs
-
+        
         # Define asset universe
         asset_universe = get_asset_universe()
-
+        
         # Calculate risk profile based on inputs
         risk_profile = calculate_risk_profile(risk_tolerance, investment_term, include_crypto)
-
+        
         # Get detailed allocation
         detailed_allocation = get_detailed_allocation(risk_profile, asset_universe)
-
+        
         # Collect all tickers for data fetching
         all_tickers = list(detailed_allocation.keys())
-
+        
         # Fetch financial data
         financial_data = fetch_financial_data(all_tickers)
-
+        
         # Calculate portfolio metrics
         portfolio_metrics, portfolio_allocation = calculate_portfolio_metrics(
             detailed_allocation, financial_data, investment_amount
         )
-
+        
         # Categorize assets
         categorized_portfolio = categorize_assets(portfolio_allocation, asset_universe)
-
+        
         # Run GenAI analysis if requested
         sentiment_results = None
         qa_insights = None
-
+        
         if use_sentiment_analysis:
             sentiment_results = analyze_portfolio_sentiment(portfolio_allocation, financial_data)
-
+        
         if use_qa_analysis:
-            qa_insights = generate_portfolio_qa(
-                portfolio_metrics, risk_tolerance, investment_term, include_crypto
-            )
-
-        # ✅ Show live stock prices
-        st.subheader("📈 Live Market Tickers")
-        for ticker in all_tickers[:5]:  # Limit to top 5 tickers
-            try:
-                live_price = yf.Ticker(ticker).info.get("regularMarketPrice", None)
-                if live_price:
-                    st.metric(label=f"{ticker} Price", value=f"${live_price:.2f}")
-            except:
-                st.write(f"{ticker}: Price unavailable")
-
-        # ✅ Show live crypto prices if selected
-        if include_crypto:
-            st.subheader("💹 Live Crypto Prices")
-            st.metric("Bitcoin (BTC)", f"${get_crypto_price('bitcoin')}")
-            st.metric("Ethereum (ETH)", f"${get_crypto_price('ethereum')}")
-
-        # ✅ Display portfolio summary with AI insights
+            qa_insights = generate_portfolio_qa(portfolio_metrics, risk_tolerance, investment_term, include_crypto)
+        
+        # Display portfolio summary with AI insights
         display_portfolio_summary(
-            portfolio_metrics,
-            categorized_portfolio,
-            investment_amount,
-            risk_tolerance,
-            investment_term,
-            use_sentiment_analysis,
-            use_qa_analysis,
-            sentiment_results,
-            qa_insights
+            portfolio_metrics, categorized_portfolio, investment_amount, 
+            risk_tolerance, investment_term, use_sentiment_analysis,
+            use_qa_analysis, sentiment_results, qa_insights
         )
 
-
-
 # Entry point when running the script directly
-if __name__ == "__main__":
+if _name_ == "_main_":
     run_investgenie_app()
