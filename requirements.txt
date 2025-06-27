@@ -8,3 +8,5 @@ torch
 transformers
 pydeck
 watchdog
+requests
+streamlit-autorefresh
