@@ -923,7 +923,7 @@ def run_investgenie_app():
             st.metric("Bitcoin (BTC)", f"${get_crypto_price('bitcoin')}")
             st.metric("Ethereum (ETH)", f"${get_crypto_price('ethereum')}")
 
-        # Display portfolio summary with AI insights
+        # ✅ Display portfolio summary with AI insights
         display_portfolio_summary(
             portfolio_metrics,
             categorized_portfolio,
@@ -935,6 +935,7 @@ def run_investgenie_app():
             sentiment_results,
             qa_insights
         )
+
 
 
 # Entry point when running the script directly
